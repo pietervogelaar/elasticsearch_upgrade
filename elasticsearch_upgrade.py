@@ -431,7 +431,7 @@ if __name__ == '__main__':
                              "Default 'sudo systemctl start elasticsearch'",
                         default='sudo systemctl start elasticsearch')
     parser.add_argument('--upgrade-command',
-                        help="Command to upgrade or update Elasticsearch on a node. "
+                        help="Command to upgrade Elasticsearch on a node. "
                              "Default 'sudo yum clean all && sudo yum install -y elasticsearch'",
                         default='sudo yum clean all && sudo yum install -y elasticsearch')
     parser.add_argument('--latest-version-command',
