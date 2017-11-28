@@ -436,7 +436,8 @@ if __name__ == '__main__':
                                 " grep elasticsearch | awk '{ print $2 }' | cut -d '-' -f1 | sort --version-sort -r |"
                                 " head -n 1")
     parser.add_argument('--version',
-                        help="A specific version to upgrade to or 'latest'. Nodes with a version"
+                        help="A specific version to upgrade to or 'latest'. If 'latest', then the highest"
+                             " available version in the repository will be determined. Nodes with a version"
                              " equal or higher will be skipped. Default 'latest'",
                         default='latest')
     parser.add_argument('-v', '--verbose', help='Display of more information', action='store_true')

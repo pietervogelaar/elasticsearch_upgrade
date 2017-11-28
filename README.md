@@ -38,14 +38,15 @@ Nodes that already have the correct version are skipped. So the script can be ex
                             yum list all elasticsearch | grep elasticsearch | awk
                             '{ print $2 }' | cut -d '-' -f1 | sort --version-sort
                             -r | head -n 1"
-      --version VERSION     A specific version to upgrade to or 'latest'. Nodes
-                            with a version equal or higher will be skipped.
-                            Default 'latest'
+      --version VERSION     A specific version to upgrade to or 'latest'. If
+                            'latest', then the highest available version in the
+                            repository will be determined. Nodes with a version
+                            equal or higher will be skipped. Default 'latest'
       -v, --verbose         Display of more information
 
-Only the nodes parameter
-If the value of version is "latest", then the highest available version in the YUM repo will be determined.
-
+Only the nodes parameter is required. This script works by default with a YUM installation
+of Elasticsearch. But with the command parameters it can be configured for other operating
+systems as well. It should also work with archive (tar) based installations.
 
 **As root user**:
 
