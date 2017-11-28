@@ -352,31 +352,31 @@ class ElasticsearchUpgrader:
         print('- Disabling shard allocation')
         if not self.disable_shard_allocation(node):
             sys.stderr.write("Failed to disable shard allocation\n")
-            exit(1)
+            return False
 
         # Stop non-essential indexing and perform a synced flush to increase shard recovery speed
         print('- Performing a synced flush')
         if not self.do_synced_flush(node):
             sys.stderr.write("Failed to perform a synced flush\n")
-            exit(1)
+            return False
 
         # Stop Elasticsearch service
         print('- Stopping Elasticsearch service')
         if not self.stop_service(node):
             sys.stderr.write("Failed to stop Elasticsearch service\n")
-            exit(1)
+            return False
 
         # Upgrade the Elasticsearch software
         print('- Upgrading Elasticsearch software')
         if not self.upgrade_elasticsearch(node):
             sys.stderr.write("Failed to upgrade Elasticsearch software\n")
-            exit(1)
+            return False
 
         # Start Elasticsearch service
         print('- Starting Elasticsearch service')
         if not self.start_service(node):
             sys.stderr.write("Failed to start Elasticsearch service\n")
-            exit(1)
+            return False
 
         self.wait_until_joined(node)
 
@@ -384,9 +384,11 @@ class ElasticsearchUpgrader:
         print('- Enabling shard allocation')
         if not self.enable_shard_allocation(node):
             sys.stderr.write("Failed to enable shard allocation\n")
-            exit(1)
+            return False
 
         self.wait_until_status_green(node)
+
+        return True
 
     def upgrade(self):
         print('Performing a rolling upgrade of the Elasticsearch cluster')
@@ -402,11 +404,13 @@ class ElasticsearchUpgrader:
                 print('Using latest version {} as version to upgrade to'.format(latest_version))
                 self._version = latest_version
             else:
-                sys.stderr.write('Failed to determine the latest version')
-                exit(1)
+                sys.stderr.write("Failed to determine the latest version\n")
+                return False
 
         for node in self._nodes:
-            self.upgrade_node(node)
+            if not self.upgrade_node(node):
+                sys.stderr.write("Failed to patch the Elasticsearch cluster\n")
+                return False
 
         print ('Successfully upgraded all nodes of the Elasticsearch cluster')
 
@@ -457,4 +461,5 @@ if __name__ == '__main__':
                                                    args.version,
                                                    args.verbose)
 
-    elasticsearch_upgrader.upgrade()
+    if not elasticsearch_upgrader.upgrade():
+        exit(1)
