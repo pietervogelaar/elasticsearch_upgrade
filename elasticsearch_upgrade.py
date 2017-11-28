@@ -47,7 +47,7 @@ class ElasticsearchUpgrader:
 
     def __init__(self,
                  nodes,
-                 port,
+                 port=9200,
                  ssl=False,
                  service_stop_command='sudo systemctl stop elasticsearch',
                  service_start_command='sudo systemctl start elasticsearch',
@@ -55,7 +55,7 @@ class ElasticsearchUpgrader:
                  latest_version_command="sudo yum clean all >/dev/null 2>&1 && yum list all elasticsearch |"
                                         " grep elasticsearch | awk '{ print $2 }' | cut -d '-' -f1 |"
                                         " sort --version-sort -r | head -n 1",
-                 version=None,
+                 version='latest',
                  verbose=False,
                  ):
         """
@@ -436,8 +436,9 @@ if __name__ == '__main__':
                                 " grep elasticsearch | awk '{ print $2 }' | cut -d '-' -f1 | sort --version-sort -r |"
                                 " head -n 1")
     parser.add_argument('--version',
-                        help='A specific version to upgrade to or "latest". Nodes with a version'
-                             ' equal or higher will be skipped')
+                        help="A specific version to upgrade to or 'latest'. Nodes with a version"
+                             " equal or higher will be skipped. Default 'latest'",
+                        default='latest')
     parser.add_argument('-v', '--verbose', help='Display of more information', action='store_true')
     args = parser.parse_args()
 
