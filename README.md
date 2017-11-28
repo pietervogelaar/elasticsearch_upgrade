@@ -109,7 +109,7 @@ to do that is with sudo line and script below.
       exit 1
     else
       echo 'Usage:'
-      echo "./esctl service (start|stop|restart) elasticsearch-default"
+      echo "./esctl service (start|stop|restart) elasticsearch"
       echo "./esctl latest-version"
       echo "./esctl update"
     fi
