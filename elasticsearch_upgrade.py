@@ -414,6 +414,8 @@ class ElasticsearchUpgrader:
 
         print ('Successfully upgraded all nodes of the Elasticsearch cluster')
 
+        return True
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Performs a rolling upgrade of an Elasticsearch cluster')
