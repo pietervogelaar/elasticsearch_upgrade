@@ -1,5 +1,5 @@
 # elasticsearch_upgrade
-Performs a rolling upgrade of an Elasticsearch cluster. It's great for keeping you're cluster automatically
+Performs a rolling upgrade of an Elasticsearch cluster. It's great for keeping your cluster automatically
 patched without downtime.
 
 Nodes that already have the correct version are skipped. So the script can be executed multiple times if desired. 
