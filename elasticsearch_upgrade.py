@@ -411,7 +411,7 @@ class ElasticsearchUpgrader:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Performs a rolling upgrade')
+    parser = argparse.ArgumentParser(description='Performs a rolling upgrade of an Elasticsearch cluster')
     parser.add_argument('-n', '--nodes', help='Comma separated list of host names or IP addresses of nodes', required=True)
     parser.add_argument('-p', '--port', help='Elasticsearch HTTP port. Default 9200', type=int, default=9200)
     parser.add_argument('-s', '--ssl', help='Connect with https', action='store_true')
