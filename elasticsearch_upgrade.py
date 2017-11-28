@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # elasticsearch_upgrade.py
+# https://github.com/pietervogelaar/elasticsearch_upgrade
 #
 # Performs a rolling upgrade of an Elasticsearch cluster
 # Based on instructions at https://www.elastic.co/guide/en/elasticsearch/reference/5.4/rolling-upgrades.html
