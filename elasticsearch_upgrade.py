@@ -191,6 +191,13 @@ class ElasticsearchUpgrader:
         """
 
         result = self.ssh_command(node, self._upgrade_command)
+
+        if self._verbose:
+            print('stdout:')
+            print(result['stdout'])
+            print('stderr:')
+            print(result['stderr'])
+
         if result['exit_code'] != 0:
             return False
 
@@ -231,7 +238,7 @@ class ElasticsearchUpgrader:
                     if self._verbose:
                         print("Node joined the cluster")
                     else:
-                        sys.stdout.write("\n")
+                        sys.stdout.write(".\n")
                         sys.stdout.flush()
 
                     return True
@@ -267,7 +274,7 @@ class ElasticsearchUpgrader:
                     if self._verbose:
                         print('Cluster status is green')
                     else:
-                        sys.stdout.write("\n")
+                        sys.stdout.write(".\n")
                         sys.stdout.flush()
 
                     return True
