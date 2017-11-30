@@ -13,7 +13,8 @@ Nodes that already have the correct version are skipped. So the script can be ex
                                     [--service-start-command SERVICE_START_COMMAND]
                                     [--upgrade-command UPGRADE_COMMAND]
                                     [--latest-version-command LATEST_VERSION_COMMAND]
-                                    [--version VERSION] [-v]
+                                    [--version VERSION] [--reboot]
+                                    [--force-reboot] [-v]
     
     Performs a rolling upgrade of an Elasticsearch cluster
     
@@ -48,6 +49,9 @@ Nodes that already have the correct version are skipped. So the script can be ex
                             'latest', then the highest available version in the
                             repository will be determined. Nodes with a version
                             equal or higher will be skipped. Default 'latest'
+      --reboot              Reboots the server if an actual upgrade took place
+      --force-reboot        Always reboots the server, even though no upgrade
+                            occurred because the version was already the latest
       -v, --verbose         Display of more information
 
 Only the nodes parameter is required. This script works by default with a YUM installation
