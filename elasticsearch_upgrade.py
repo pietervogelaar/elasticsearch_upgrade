@@ -60,6 +60,8 @@ class ElasticsearchUpgrader:
                                         " grep elasticsearch | awk '{ print $2 }' | cut -d '-' -f1 |"
                                         " sort --version-sort -r | head -n 1",
                  version='latest',
+                 reboot=False,
+                 force_reboot=False,
                  verbose=False,
                  ):
         """
@@ -74,6 +76,8 @@ class ElasticsearchUpgrader:
         :param upgrade_command: string
         :param latest_version_command: string
         :param version: string
+        :param reboot: bool
+        :param force_reboot: bool
         :param verbose: bool
         """
 
@@ -86,8 +90,13 @@ class ElasticsearchUpgrader:
         self._service_start_command = service_start_command
         self._upgrade_command = upgrade_command
         self._latest_version_command = latest_version_command
+        self._reboot = reboot
+        self._force_reboot = force_reboot
         self._version = version
         self._verbose = verbose
+
+        # Internal class attributes
+        self._rebooting = False
 
     def verbose_response(self, response):
         if self._verbose:
@@ -228,6 +237,11 @@ class ElasticsearchUpgrader:
         if result['exit_code'] != 0:
             return False
 
+        if self._force_reboot:
+            self.reboot(node)
+        elif self._reboot and 'Nothing to do' not in result['stdout']:
+            self.reboot(node)
+
         return True
 
     def start_service(self, node):
@@ -342,6 +356,11 @@ class ElasticsearchUpgrader:
 
         return False
 
+    def reboot(self, node):
+        print('- Rebooting')
+        self._rebooting = True
+        self.ssh_command(node, 'sudo /sbin/reboot')
+
     def get_node_url(self, node):
         """
         Gets a node URL
@@ -387,40 +406,60 @@ class ElasticsearchUpgrader:
     def upgrade_node(self, node):
         print('Node {}'.format(node))
 
+        self._rebooting = False
+
         if self._version:
             # Only upgrade node if the current version is lower than the version to upgrade to
             if not self.current_version_lower(node):
-                return True
+                if self._force_reboot:
+                    # Disable shard allocation
+                    print('- Disabling shard allocation')
+                    if not self.disable_shard_allocation(node):
+                        sys.stderr.write("Failed to disable shard allocation\n")
+                        return False
 
-        # Disable shard allocation
-        print('- Disabling shard allocation')
-        if not self.disable_shard_allocation(node):
-            sys.stderr.write("Failed to disable shard allocation\n")
-            return False
+                    # Stop non-essential indexing and perform a synced flush to increase shard recovery speed
+                    print('- Performing a synced flush')
+                    if not self.do_synced_flush(node):
+                        sys.stderr.write("Failed to perform a synced flush\n")
+                        return False
 
-        # Stop non-essential indexing and perform a synced flush to increase shard recovery speed
-        print('- Performing a synced flush')
-        if not self.do_synced_flush(node):
-            sys.stderr.write("Failed to perform a synced flush\n")
-            return False
+                    # Reboot
+                    self.reboot(node)
+                else:
+                    return True
 
-        # Stop Elasticsearch service
-        print('- Stopping Elasticsearch service')
-        if not self.stop_service(node):
-            sys.stderr.write("Failed to stop Elasticsearch service\n")
-            return False
+        if not self._rebooting:
+            # Disable shard allocation
+            print('- Disabling shard allocation')
+            if not self.disable_shard_allocation(node):
+                sys.stderr.write("Failed to disable shard allocation\n")
+                return False
 
-        # Upgrade the Elasticsearch software
-        print('- Upgrading Elasticsearch software')
-        if not self.upgrade_elasticsearch(node):
-            sys.stderr.write("Failed to upgrade Elasticsearch software\n")
-            return False
+            # Stop non-essential indexing and perform a synced flush to increase shard recovery speed
+            print('- Performing a synced flush')
+            if not self.do_synced_flush(node):
+                sys.stderr.write("Failed to perform a synced flush\n")
+                return False
 
-        # Start Elasticsearch service
-        print('- Starting Elasticsearch service')
-        if not self.start_service(node):
-            sys.stderr.write("Failed to start Elasticsearch service\n")
-            return False
+            # Stop Elasticsearch service
+            print('- Stopping Elasticsearch service')
+            if not self.stop_service(node):
+                sys.stderr.write("Failed to stop Elasticsearch service\n")
+                return False
+
+            # Upgrade the Elasticsearch software
+            print('- Upgrading Elasticsearch software')
+            if not self.upgrade_elasticsearch(node):
+                sys.stderr.write("Failed to upgrade Elasticsearch software\n")
+                return False
+
+            if not self._rebooting:
+                # Start Elasticsearch service
+                print('- Starting Elasticsearch service')
+                if not self.start_service(node):
+                    sys.stderr.write("Failed to start Elasticsearch service\n")
+                    return False
 
         self.wait_until_joined(node)
 
@@ -494,6 +533,9 @@ if __name__ == '__main__':
                              " available version in the repository will be determined. Nodes with a version"
                              " equal or higher will be skipped. Default 'latest'",
                         default='latest')
+    parser.add_argument('--reboot', help='Reboots the server if an actual upgrade took place', action='store_true')
+    parser.add_argument('--force-reboot', help='Always reboots the server, even though no upgrade occurred because'
+                                               ' the version was already the latest', action='store_true')
     parser.add_argument('-v', '--verbose', help='Display of more information', action='store_true')
     args = parser.parse_args()
 
@@ -510,6 +552,8 @@ if __name__ == '__main__':
                                                    args.upgrade_command,
                                                    args.latest_version_command,
                                                    args.version,
+                                                   args.reboot,
+                                                   args.force_reboot,
                                                    args.verbose)
 
     if not elasticsearch_upgrader.upgrade():
