@@ -124,11 +124,11 @@ class ElasticsearchUpgrader:
             data = response.json()
             if 'version' in data and 'number' in data['version']:
                 if StrictVersion(data['version']['number']) == StrictVersion(self._version):
-                    print('Skipping, the current version {} is the same as the version to upgrade to'
+                    print('Skipping upgrade, the current version {} is the same as the version to upgrade to'
                           .format(data['version']['number']))
                     return False
                 elif StrictVersion(data['version']['number']) > StrictVersion(self._version):
-                    print('Skipping, the current version {} is higher than version {} to upgrade to'
+                    print('Skipping upgrade, the current version {} is higher than version {} to upgrade to'
                           .format(data['version']['number'], self._version))
                     return False
                 else:
