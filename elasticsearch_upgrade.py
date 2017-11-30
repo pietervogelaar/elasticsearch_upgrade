@@ -305,40 +305,57 @@ class ElasticsearchUpgrader:
         :param node:
         :return: bool
         """
-
-        if self._username:
-            auth = HTTPBasicAuth(self._username, self._password)
-        else:
-            auth = None
-
         print('- Waiting until cluster status is green')
-
-        url = '{}/_cat/health'.format(self.get_node_url(node))
 
         while True:
             time.sleep(5)
 
-            try:
-                response = requests.get(url, auth=auth)
-                self.verbose_response(response)
-
-                if response.status_code == 200 and 'green' in response.text:
-                    if self._verbose:
-                        print('Cluster status is green')
-                    else:
-                        sys.stdout.write(".\n")
-                        sys.stdout.flush()
-
-                    return True
-            except ConnectionError as exception:
+            if self.get_cluster_status(node) == 'green':
                 if self._verbose:
-                    print('Could not connect to node')
+                    print('Cluster status is green')
+                else:
+                    sys.stdout.write(".\n")
+                    sys.stdout.flush()
+
+                return True
 
             if self._verbose:
                 print('Cluster status is not green yet')
             else:
                 sys.stdout.write('.')
                 sys.stdout.flush()
+
+    def get_cluster_status(self, node):
+        """
+        Gets the cluster status
+        :param node:
+        :return: string "green", "yellow" or "red"
+        """
+        cluster_status = None
+
+        if self._username:
+            auth = HTTPBasicAuth(self._username, self._password)
+        else:
+            auth = None
+
+        url = '{}/_cat/health'.format(self.get_node_url(node))
+
+        try:
+            response = requests.get(url, auth=auth)
+            self.verbose_response(response)
+
+            if response.status_code == 200:
+                if 'green' in response.text:
+                    cluster_status = 'green'
+                elif 'yellow' in response.text:
+                    cluster_status = 'yellow'
+                elif 'red' in response.text:
+                    cluster_status = 'red'
+        except ConnectionError as exception:
+            if self._verbose:
+                sys.stderr.write("Could not connect to node\n")
+
+        return cluster_status
 
     def get_latest_version(self, node):
         """
@@ -497,6 +514,11 @@ class ElasticsearchUpgrader:
             else:
                 sys.stderr.write("Failed to determine the latest version\n")
                 return False
+
+        # Only start upgrading the cluster if the cluster status is green
+        if self.get_cluster_status(self._nodes[0]) != 'green':
+            sys.stderr.write("Did not start upgrading the cluster because the status is not green\n")
+            return False
 
         for node in self._nodes:
             if not self.upgrade_node(node):
