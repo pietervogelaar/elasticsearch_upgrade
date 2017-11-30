@@ -33,6 +33,7 @@
 
 import argparse
 import json
+import re
 import requests
 import subprocess
 import sys
@@ -274,7 +275,7 @@ class ElasticsearchUpgrader:
         url = '{}/_cat/nodes'.format(self.get_node_url(node))
 
         while True:
-            time.sleep(10)
+            time.sleep(5)
 
             try:
                 response = requests.get(url, auth=auth)
@@ -315,7 +316,7 @@ class ElasticsearchUpgrader:
         url = '{}/_cat/health'.format(self.get_node_url(node))
 
         while True:
-            time.sleep(10)
+            time.sleep(5)
 
             try:
                 response = requests.get(url, auth=auth)
@@ -389,15 +390,22 @@ class ElasticsearchUpgrader:
         stdout = p.stdout.readlines()
         stderr = p.stderr.readlines()
 
-        if stderr:
-            sys.stderr.write("SSH error from host {}: {}\n".format(host, ''.join(stderr)))
+        stdout_string = ''.join(stdout)
+        stderr_string = ''.join(stderr)
+
+        # Remove clutter
+        regex = re.compile(r"Connection .+? closed by remote host\.\n?", re.IGNORECASE)
+        stderr_string = regex.sub('', stderr_string).strip()
+
+        if stderr_string:
+            sys.stderr.write("SSH error from host {}: {}\n".format(host, stderr_string))
 
         # Make a return code available
         p.communicate()[0]
 
         result = {
-            'stdout': ''.join(stdout),
-            'stderr': ''.join(stderr),
+            'stdout': stdout_string,
+            'stderr': stderr_string,
             'exit_code': p.returncode,
         }
 
