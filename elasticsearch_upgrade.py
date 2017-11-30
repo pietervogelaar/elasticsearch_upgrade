@@ -523,19 +523,19 @@ class ElasticsearchUpgrader:
             if not self.upgrade_elasticsearch(node):
                 sys.stderr.write("Failed to upgrade Elasticsearch software\n")
                 return False
-            else:
-                if self._upgrade_system:
-                    print('- Upgrading operating system')
-                    if not self.upgrade_system(node):
-                        sys.stderr.write("Failed to upgrade operating system\n")
-                        return False
-                    else:
-                        if not self._os_upgrades_available:
-                            print('No operating system upgrades available')
 
-                if (self._force_reboot or
-                   (self._reboot and (self._elasticsearch_upgrades_available or self._os_upgrades_available))):
-                    self.reboot(node)
+            if self._upgrade_system:
+                print('- Upgrading operating system')
+                if not self.upgrade_system(node):
+                    sys.stderr.write("Failed to upgrade operating system\n")
+                    return False
+                else:
+                    if not self._os_upgrades_available:
+                        print('No operating system upgrades available')
+
+            if (self._force_reboot or
+               (self._reboot and (self._elasticsearch_upgrades_available or self._os_upgrades_available))):
+                self.reboot(node)
 
             if not self._rebooting:
                 # Start Elasticsearch service
