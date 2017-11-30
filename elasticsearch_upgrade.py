@@ -61,6 +61,8 @@ class ElasticsearchUpgrader:
                                         " grep elasticsearch | awk '{ print $2 }' | cut -d '-' -f1 |"
                                         " sort --version-sort -r | head -n 1",
                  version='latest',
+                 upgrade_system_command='sudo yum clean all && sudo yum update -y',
+                 upgrade_system=False,
                  reboot=False,
                  force_reboot=False,
                  verbose=False,
@@ -77,6 +79,8 @@ class ElasticsearchUpgrader:
         :param upgrade_command: string
         :param latest_version_command: string
         :param version: string
+        :param upgrade_system_command: string
+        :param upgrade_system: string
         :param reboot: bool
         :param force_reboot: bool
         :param verbose: bool
@@ -91,13 +95,17 @@ class ElasticsearchUpgrader:
         self._service_start_command = service_start_command
         self._upgrade_command = upgrade_command
         self._latest_version_command = latest_version_command
+        self._version = version
+        self._upgrade_system_command = upgrade_system_command
+        self._upgrade_system = upgrade_system
         self._reboot = reboot
         self._force_reboot = force_reboot
-        self._version = version
         self._verbose = verbose
 
         # Internal class attributes
         self._rebooting = False
+        self._elasticsearch_upgrades_available = False
+        self._os_upgrades_available = False
 
     def verbose_response(self, response):
         if self._verbose:
@@ -238,10 +246,34 @@ class ElasticsearchUpgrader:
         if result['exit_code'] != 0:
             return False
 
-        if self._force_reboot:
-            self.reboot(node)
-        elif self._reboot and 'Nothing to do' not in result['stdout']:
-            self.reboot(node)
+        if 'Nothing to do' in result['stdout']:
+            self._elasticsearch_upgrades_available = False
+        else:
+            self._elasticsearch_upgrades_available = True
+
+        return True
+
+    def upgrade_system(self, node):
+        """
+        Upgrades the operating system
+        :param node: string
+        :return: bool
+        """
+        result = self.ssh_command(node, self._upgrade_system_command)
+
+        if self._verbose:
+            print('stdout:')
+            print(result['stdout'])
+            print('stderr:')
+            print(result['stderr'])
+
+        if result['exit_code'] != 0:
+            return False
+
+        if 'No packages marked for update' in result['stdout']:
+            self._os_upgrades_available = False
+        else:
+            self._os_upgrades_available = True
 
         return True
 
@@ -429,14 +461,27 @@ class ElasticsearchUpgrader:
         return result
 
     def upgrade_node(self, node):
-        print('Node {}'.format(node))
+        print('# Node {}'.format(node))
 
         self._rebooting = False
+        self._elasticsearch_upgrades_available = False
+        self._os_upgrades_available = False
 
         if self._version:
             # Only upgrade node if the current version is lower than the version to upgrade to
             if not self.current_version_lower(node):
-                if self._force_reboot:
+                # Elasticsearch already up to date
+
+                if self._upgrade_system:
+                    print('- Upgrading operating system')
+                    if not self.upgrade_system(node):
+                        sys.stderr.write("Failed to upgrade operating system\n")
+                        return False
+                    else:
+                        if not self._os_upgrades_available:
+                            print('No operating system upgrades available')
+
+                if self._force_reboot or (self._reboot and self._os_upgrades_available):
                     # Disable shard allocation
                     print('- Disabling shard allocation')
                     if not self.disable_shard_allocation(node):
@@ -478,6 +523,20 @@ class ElasticsearchUpgrader:
             if not self.upgrade_elasticsearch(node):
                 sys.stderr.write("Failed to upgrade Elasticsearch software\n")
                 return False
+            else:
+                if self._upgrade_system:
+                    print('- Upgrading operating system')
+                    if not self.upgrade_system(node):
+                        sys.stderr.write("Failed to upgrade operating system\n")
+                        return False
+                    else:
+                        if not self._os_upgrades_available:
+                            print('No operating system upgrades available')
+
+                if self._force_reboot:
+                    self.reboot(node)
+                elif self._reboot and (self._elasticsearch_upgrades_available or self._os_upgrades_available):
+                    self.reboot(node)
 
             if not self._rebooting:
                 # Start Elasticsearch service
@@ -516,6 +575,7 @@ class ElasticsearchUpgrader:
                 return False
 
         # Only start upgrading the cluster if the cluster status is green
+        print('Checking if cluster status is green')
         if self.get_cluster_status(self._nodes[0]) != 'green':
             sys.stderr.write("Did not start upgrading the cluster because the status is not green\n")
             return False
@@ -563,6 +623,11 @@ if __name__ == '__main__':
                              " available version in the repository will be determined. Nodes with a version"
                              " equal or higher will be skipped. Default 'latest'",
                         default='latest')
+    parser.add_argument('--upgrade-system-command',
+                        help="Command to upgrade operating system. Default 'sudo yum clean all && sudo yum update -y'",
+                        default='sudo yum clean all && sudo yum update -y')
+    parser.add_argument('--upgrade-system', help='Upgrades the operating system also after upgrading Elasticsearch',
+                        action='store_true')
     parser.add_argument('--reboot', help='Reboots the server if an actual upgrade took place', action='store_true')
     parser.add_argument('--force-reboot', help='Always reboots the server, even though no upgrade occurred because'
                                                ' the version was already the latest', action='store_true')
@@ -582,6 +647,8 @@ if __name__ == '__main__':
                                                    args.upgrade_command,
                                                    args.latest_version_command,
                                                    args.version,
+                                                   args.upgrade_system_command,
+                                                   args.upgrade_system,
                                                    args.reboot,
                                                    args.force_reboot,
                                                    args.verbose)
