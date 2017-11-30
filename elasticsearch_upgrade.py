@@ -533,9 +533,8 @@ class ElasticsearchUpgrader:
                         if not self._os_upgrades_available:
                             print('No operating system upgrades available')
 
-                if self._force_reboot:
-                    self.reboot(node)
-                elif self._reboot and (self._elasticsearch_upgrades_available or self._os_upgrades_available):
+                if (self._force_reboot or
+                   (self._reboot and (self._elasticsearch_upgrades_available or self._os_upgrades_available))):
                     self.reboot(node)
 
             if not self._rebooting:
