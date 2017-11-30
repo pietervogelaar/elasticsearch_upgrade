@@ -7,7 +7,8 @@ Nodes that already have the correct version are skipped. So the script can be ex
 
 # Usage
 
-    usage: elasticsearch_upgrade.py [-h] -n NODES [-p PORT] [-s]
+    usage: elasticsearch_upgrade.py [-h] -n NODES [-u USERNAME] [-P PASSWORD]
+                                    [-p PORT] [-s]
                                     [--service-stop-command SERVICE_STOP_COMMAND]
                                     [--service-start-command SERVICE_START_COMMAND]
                                     [--upgrade-command UPGRADE_COMMAND]
@@ -21,6 +22,10 @@ Nodes that already have the correct version are skipped. So the script can be ex
       -n NODES, --nodes NODES
                             Comma separated list of host names or IP addresses of
                             nodes
+      -u USERNAME, --username USERNAME
+                            Username for authentication
+      -P PASSWORD, --password PASSWORD
+                            Password for authentication
       -p PORT, --port PORT  Elasticsearch HTTP port. Default 9200
       -s, --ssl             Connect with https
       --service-stop-command SERVICE_STOP_COMMAND
@@ -30,8 +35,8 @@ Nodes that already have the correct version are skipped. So the script can be ex
                             Shell command to start the Elasticsearch service on a
                             node. Default 'sudo systemctl start elasticsearch'
       --upgrade-command UPGRADE_COMMAND
-                            Command to upgrade or update Elasticsearch on a node.
-                            Default 'sudo yum clean all && sudo yum install -y
+                            Command to upgrade Elasticsearch on a node. Default
+                            'sudo yum clean all && sudo yum install -y
                             elasticsearch'
       --latest-version-command LATEST_VERSION_COMMAND
                             Command to get the latest version in the repository.

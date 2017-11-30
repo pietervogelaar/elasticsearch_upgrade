@@ -38,6 +38,7 @@ import subprocess
 import sys
 import time
 from distutils.version import StrictVersion
+from requests.auth import HTTPBasicAuth
 from requests.exceptions import ConnectionError
 
 
@@ -48,6 +49,8 @@ class ElasticsearchUpgrader:
 
     def __init__(self,
                  nodes,
+                 username=None,
+                 password=None,
                  port=9200,
                  ssl=False,
                  service_stop_command='sudo systemctl stop elasticsearch',
@@ -62,6 +65,8 @@ class ElasticsearchUpgrader:
         """
         Constructor
         :param nodes: list Host names or IP addresses of nodes
+        :param username: string
+        :param password: string
         :param port: int
         :param ssl: bool
         :param service_stop_command: string
@@ -73,6 +78,8 @@ class ElasticsearchUpgrader:
         """
 
         self._nodes = nodes
+        self._username = username
+        self._password = password
         self._port = port
         self._ssl = ssl
         self._service_stop_command = service_stop_command
@@ -95,7 +102,12 @@ class ElasticsearchUpgrader:
         :param node: string
         :return: bool
         """
-        response = requests.get(self.get_node_url(node))
+        if self._username:
+            auth = HTTPBasicAuth(self._username, self._password)
+        else:
+            auth = None
+
+        response = requests.get(self.get_node_url(node), auth=auth)
         self.verbose_response(response)
 
         if response.status_code == 200:
@@ -126,6 +138,11 @@ class ElasticsearchUpgrader:
         :param node: string
         :return: bool
         """
+        if self._username:
+            auth = HTTPBasicAuth(self._username, self._password)
+        else:
+            auth = None
+
         data = {
             'transient': {
                 'cluster.routing.allocation.enable': 'none'
@@ -133,7 +150,7 @@ class ElasticsearchUpgrader:
         }
 
         url = '{}/_cluster/settings'.format(self.get_node_url(node))
-        response = requests.put(url, json=data)
+        response = requests.put(url, json=data, auth=auth)
         self.verbose_response(response)
 
         return response.status_code == 200
@@ -144,6 +161,11 @@ class ElasticsearchUpgrader:
         :param node: string
         :return: bool
         """
+        if self._username:
+            auth = HTTPBasicAuth(self._username, self._password)
+        else:
+            auth = None
+
         data = {
             'transient': {
                 'cluster.routing.allocation.enable': 'all'
@@ -151,7 +173,7 @@ class ElasticsearchUpgrader:
         }
 
         url = '{}/_cluster/settings'.format(self.get_node_url(node))
-        response = requests.put(url, json=data)
+        response = requests.put(url, json=data, auth=auth)
         self.verbose_response(response)
 
         return response.status_code == 200
@@ -162,9 +184,14 @@ class ElasticsearchUpgrader:
         :param node: string
         :return: bool
         """
+        if self._username:
+            auth = HTTPBasicAuth(self._username, self._password)
+        else:
+            auth = None
+
         data = {}
         url = '{}/_flush/synced'.format(self.get_node_url(node))
-        response = requests.post(url, json=data)
+        response = requests.post(url, json=data, auth=auth)
         self.verbose_response(response)
 
         # This operation is best effort, so ignore the response status code
@@ -225,13 +252,18 @@ class ElasticsearchUpgrader:
 
         print('- Waiting until node joins the cluster')
 
+        if self._username:
+            auth = HTTPBasicAuth(self._username, self._password)
+        else:
+            auth = None
+
+        url = '{}/_cat/nodes'.format(self.get_node_url(node))
+
         while True:
             time.sleep(10)
 
-            url = '{}/_cat/nodes'.format(self.get_node_url(node))
-
             try:
-                response = requests.get(url)
+                response = requests.get(url, auth=auth)
                 self.verbose_response(response)
 
                 if response.status_code == 200 and node in response.text:
@@ -259,15 +291,20 @@ class ElasticsearchUpgrader:
         :return: bool
         """
 
+        if self._username:
+            auth = HTTPBasicAuth(self._username, self._password)
+        else:
+            auth = None
+
         print('- Waiting until cluster status is green')
+
+        url = '{}/_cat/health'.format(self.get_node_url(node))
 
         while True:
             time.sleep(10)
 
-            url = '{}/_cat/health'.format(self.get_node_url(node))
-
             try:
-                response = requests.get(url)
+                response = requests.get(url, auth=auth)
                 self.verbose_response(response)
 
                 if response.status_code == 200 and 'green' in response.text:
@@ -428,6 +465,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Performs a rolling upgrade of an Elasticsearch cluster')
     parser.add_argument('-n', '--nodes', help='Comma separated list of host names or IP addresses of nodes',
                         required=True)
+    parser.add_argument('-u', '--username', help='Username for authentication')
+    parser.add_argument('-P', '--password', help='Password for authentication')
     parser.add_argument('-p', '--port', help='Elasticsearch HTTP port. Default 9200', type=int, default=9200)
     parser.add_argument('-s', '--ssl', help='Connect with https', action='store_true')
     parser.add_argument('--service-stop-command',
@@ -462,6 +501,8 @@ if __name__ == '__main__':
     nodes = args.nodes.replace(' ', '').split(',')
 
     elasticsearch_upgrader = ElasticsearchUpgrader(nodes,
+                                                   args.username,
+                                                   args.password,
                                                    args.port,
                                                    args.ssl,
                                                    args.service_stop_command,
