@@ -5,6 +5,8 @@ patched without downtime.
 
 Nodes that already have the correct version are skipped. So the script can be executed multiple times if desired. 
 
+Heavily tested with Elasticsearch version 5.6.3.
+
 # Usage
 
     usage: elasticsearch_upgrade.py [-h] -n NODES [-u USERNAME] [-P PASSWORD]
