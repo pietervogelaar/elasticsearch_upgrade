@@ -589,7 +589,7 @@ class ElasticsearchUpgrader:
         return True
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Performs a rolling upgrade of an Elasticsearch cluster')
     parser.add_argument('-n', '--nodes', help='Comma separated list of host names or IP addresses of nodes',
                         required=True)
@@ -654,3 +654,7 @@ if __name__ == '__main__':
 
     if not elasticsearch_upgrader.upgrade():
         exit(1)
+
+
+if __name__ == '__main__':
+    main()
