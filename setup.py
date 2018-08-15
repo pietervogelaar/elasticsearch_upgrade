@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def readme():
@@ -27,6 +27,7 @@ setup(
     install_requires=[
         'requests',
     ],
+    packages=find_packages(),
     entry_points={
         'console_scripts': ['elasticsearch-upgrade=elasticsearch_upgrade:main'],
     },
