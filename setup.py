@@ -27,8 +27,6 @@ setup(
     install_requires=[
         'requests',
     ],
-    entry_points={
-        'console_scripts': ['elasticsearch-upgrade=elasticsearch_upgrade:main'],
-    },
+    scripts=['elasticsearch_upgrade.py'],
     include_package_data=True,
     zip_safe=False)
